@@ -32,32 +32,174 @@ OpenPGP.js uses ES6 promises which are available in [most modern browsers](http:
 
 ### Examples
 
-#### Encryption
+#### Node Encrypt Message
 ```js
+/**
+ * Encrypt a message using the recipient's public key.
+ * @param  {pubkey} String - Encrypted ASCII Armored public key.
+ * @param  {message} String - Your message to the recipient.
+ * @return {pgpMessage} String - Encrypted ASCII Armored message.
+ */
+ 
 var openpgp = require('openpgp');
 var key = '-----BEGIN PGP PUBLIC KEY BLOCK ... END PGP PUBLIC KEY BLOCK-----';
-var publicKey = openpgp.key.readArmored(key);
-openpgp.encryptMessage(publicKey.keys, 'Hello, World!').then(function(pgpMessage) {
+var pubkey = openpgp.key.readArmored(key);
+openpgp.encryptMessage(publicKey.keys, message).then(function(pgpMessage) {
     // success
 }).catch(function(error) {
     // failure
 });
 ```
 
-#### Decryption
+#### Non-Node Encrypt Message
+```javascript
+/**
+ * Encrypt a message using the recipient's public key.
+ * @param  {pubkey} String - Encrypted ASCII Armored public key.
+ * @param  {message} String - Your message to the recipient.
+ * @return {pgpMessage} String - Encrypted ASCII Armored message.
+ */
+
+function encrypt_message(pubkey, message) {
+    var openpgp = window.openpgp;
+    var key = pubkey;
+    var publicKey = openpgp.key.readArmored(key);
+    var pgpMessage = openpgp.encryptMessage(publicKey.keys, message);
+    return pgpMessage;
+}
+```
+
+#### Node Decrypt Message
 ```js
+/**
+ * Decrypt a message using your private key.
+ * @param  {pubkey} String - Your recipient's public key.
+ * @param  {privkey} String - Your private key.
+ * @param  {passphrase} String - Your ultra-strong password.
+ * @param  {encoded_message} String - Your message from the recipient.
+ * @return {plaintext} String - Decrypted message.
+ */
+ 
 var openpgp = require('openpgp');
 var key = '-----BEGIN PGP PRIVATE KEY BLOCK ... END PGP PRIVATE KEY BLOCK-----';
-var privateKey = openpgp.key.readArmored(key).keys[0];
-privateKey.decrypt('passphrase');
+var privkey = openpgp.key.readArmored(key).keys[0];
+privkey.decrypt('passphrase');
 var pgpMessage = '-----BEGIN PGP MESSAGE ... END PGP MESSAGE-----';
 pgpMessage = openpgp.message.readArmored(pgpMessage);
-openpgp.decryptMessage(privateKey, pgpMessage).then(function(plaintext) {
+openpgp.decryptMessage(privkey, pgpMessage).then(function(plaintext) {
     // success
 }).catch(function(error) {
     // failure
 });
 ```
+
+#### Non-Node Decrypt Message
+```javascript
+/**
+ * Decrypt a message using your private key.
+ * @param  {pubkey} String - Your recipient's public key.
+ * @param  {privkey} String - Your private key.
+ * @param  {passphrase} String - Your ultra-strong password.
+ * @param  {encoded_message} String - Your message from the recipient.
+ * @return {decrypted} String - Decrypted message.
+ */
+
+function decrypt_message(pubkey, privkey, passphrase, encoded_message) {
+    var openpgp = window.openpgp;
+    var privKeys = openpgp.key.readArmored(privkey);
+    var publicKeys = openpgp.key.readArmored(pubkey);
+    var privKey = privKeys.keys[0];
+    var success = privKey.decrypt(passphrase);
+    var message = openpgp.message.readArmored(encoded_message);
+    var decrypted = openpgp.decryptMessage(privKey, message);
+    return decrypted;
+}
+```
+
+#### Non-Node Generate Keypair
+```javascript
+	/**
+	* Generate a Private and Public keypair
+	* @param  {numBits} Integer - Any multiple of 1024. 2048 is recommended.
+	* @param  {userid} String - should be like: Alice Mayfield <amayfield@quantum.com>
+	* @param  {passphrase} String - password should be a 4-5 word sentence (20+ chars)
+	* @return {key} String - Encrypted ASCII armored keypair (contains both Private and Public keys)
+	*/
+	function keygen(numBits, userId, passphrase) {
+    var openpgp = window.openpgp;
+    var key = openpgp.generateKeyPair({
+        numBits: numBits,
+        userId: userId,
+        passphrase: passphrase
+    });
+    return key;
+}
+```
+
+#### Non-Node Sign Message
+```javascript
+/**
+ * Sign a message using your private key.
+ * @param  {pubkey} String - Your recipient's public key.
+ * @param  {privkey} String - Your private key.
+ * @param  {passphrase} String - Your ultra-strong password.
+ * @param  {message} String - Your message from the recipient.
+ * @return {signed} String - Signed message.
+ */
+
+function sign_message(pubkey, privkey, passphrase, message){
+	var openpgp = window.openpgp;
+	var priv = openpgp.key.readArmored(privkey);
+	var pub = openpgp.key.readArmored(pubkey);
+	var privKey = priv.keys[0];
+	var success = priv.decrypt(passphrase);
+	var signed = openpgp.signClearMessage(priv.keys, message);
+	return signed;  
+	}
+```
+
+#### Non-Node Verify Signature
+```javascript
+/**
+ * Sign a message using your private key.
+ * @param  {pubkey} String - Your recipient's public key.
+ * @param  {privkey} String - Your private key.
+ * @param  {passphrase} String - Your ultra-strong password.
+ * @param  {signed_message} String - Your signed message from the recipient.
+ * @return {signed} Boolean - True (1) is a valid signed message.
+ */
+
+function verify_signature(pubkey, privkey, passphrase, signed_message) {
+    var openpgp = window.openpgp;
+    var privKeys = openpgp.key.readArmored(privkey);
+    var publicKeys = openpgp.key.readArmored(pubkey);
+    var privKey = privKeys.keys[0];
+    var success = privKey.decrypt(passphrase);
+    var message = openpgp.cleartext.readArmored(signed_message);
+    var verified = openpgp.verifyClearSignedMessage(publicKeys.keys, message);
+    if (verified.signatures[0].valid === true) {
+        return '1';
+    } else {
+        return '0';
+    }
+}
+```
+
+#### HTML5 Storage
+```javascript
+HTML5 supports offline storage in the browser.
+One possible use is key storage. For non-IE storage, use this format:
+
+localStorage.setItem("companyname.privkey", privkey); 
+localStorage.setItem("companyname.pubkey", key.publicKeyArmored);
+
+localStorage.getItem("companyname.privkey"); 
+localStorage.getItem("companyname.pubkey");
+```
+
+
+
+
 
 ### Security recommendations
 
